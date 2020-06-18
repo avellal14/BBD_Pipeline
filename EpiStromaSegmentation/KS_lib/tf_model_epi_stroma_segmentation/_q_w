@@ -1,0 +1,198 @@
+#################################
+
+#################################
+
+import time
+import numpy as np
+import tensorflow as tf
+import os
+import scipy.io as sio
+import cv2
+
+from KS_lib.tf_model_he_cell_segmentation import tf_model_input_test
+from KS_lib.tf_model_he_cell_segmentation import tf_model
+from KS_lib.prepare_data import routine
+from KS_lib.general import matlab
+from itertools import izip
+from KS_lib.image import KSimage
+
+########################################################################################################################
+#TAKE THE IMAGE, PASS IT THROUGH THE NETWORK AS IS, and see what it does
+def whole_image_processing(filename, sess, logits_test, parameters, images_test, keep_prob, mean_image, variance_image, flags):
+
+   # image = KSimage.imread(filename)
+    #print("PRED SHAPE 1: " + str(image.shape))
+#    image = KSimage.imresize(image,0.25)
+ #   print("PRED SHAPE 2: " + str(image.shape))
+  #  image = np.float32(image)
+
+
+    patches, patches_mask, image_size, nPatches = tf_model_input_test.read_data_test(filename, flags)
+    image, image_mask, image_size = tf_model_input_test.read_whole_image_test(filename,flags)
+
+    epsilon = 1e-6
+    #inputs mean_image and variance_image are now 1x1x3
+    mean_image_new = np.multiply(np.ones(image.shape) , mean_image)
+    variance_image_new = np.multiply(np.ones(image.shape), variance_image)
+
+
+   # if np.any(np.array(tmp) > 0.5):
+    image = image - mean_image_new
+    image = image / np.sqrt(variance_image_new + epsilon)
+    image = np.expand_dims(image,axis=0)
+
+    pred, paras = sess.run([logits_test, parameters], feed_dict={images_test: image, keep_prob: 1.0})
+
+
+    #ALL BELOW JUST TAKEN OUT
+    fractionWhite = np.sum(image_mask == 255.0)/image_mask.size
+    if (fractionWhite <= 0.5):
+        pred = np.zeros(tf.shape(pred), dtype=np.float32)
+        x = pred[0, :, :, :]
+        x[:, :, 0] = 1.0
+        pred[0, :, :, :] = x
+
+    pred = tf.squeeze(pred)
+    pred = np.asarray(pred.eval())
+    pred = KSimage.imresize(pred, 1.01 / 0.5)
+    pred = np.argmax(pred, axis=2)
+    pred = pred * 255.0
+
+
+
+
+    return pred
+
+###################################################
+  #####################################################
+    #########################################################
+def batch_processing(filename, sess, logits_test, parameters, images_test, keep_prob, mean_image, variance_image, flags):
+    # Read image and extract patches
+    patches, patches_mask, image_size, nPatches = tf_model_input_test.read_data_test(filename, flags)
+
+    def batches(generator, size):
+        source = generator
+        while True:
+            chunk = [val for _, val in izip(xrange(size), source)]
+            if not chunk:
+                raise StopIteration
+            yield chunk
+
+    # Construct batch indices
+    batch_index = range(0, nPatches, flags['test_batch_size'])
+    if nPatches not in batch_index:
+        batch_index.append(nPatches)
+
+    # Process all_patches
+    shape = np.hstack([nPatches, flags['size_output_patch']])
+    shape[-1] = logits_test.get_shape()[3].value
+    all_patches = np.zeros(shape, dtype=np.float32)
+
+    for ipatch, chunk in enumerate(zip(batches(patches, flags['test_batch_size']),
+                                       batches(patches_mask, flags['test_batch_size']))):
+        start_time = time.time()
+        start_idx = batch_index[ipatch]
+        end_idx = batch_index[ipatch + 1]
+
+
+
+        tmp = list()
+        for i in range(len(chunk[1])):
+            tmp.append(np.sum(chunk[1][i]==255.0)/float(chunk[1][i].size))
+
+        #print("NEXT ITERATION")
+        # process batch if any patch within it has >=50% uncovered by mask --> make sure to understand. white = uncovered by mask
+        if np.any(np.array(tmp) > 0.5):
+           # print("MORE THAN 50% in mask")
+            # temp = tf_model_input_test.inputs_test(patches[start_idx:end_idx, :, :, :], mean_image, variance_image)
+            temp = tf_model_input_test.inputs_test(chunk[0], mean_image, variance_image)
+
+            if temp.shape[0] < flags['test_batch_size']:
+                rep = np.tile(temp[-1, :, :, :], [flags['test_batch_size'] - temp.shape[0], 1, 1, 1])
+                temp = np.vstack([temp, rep])
+
+            pred, paras = sess.run([logits_test, parameters], feed_dict={images_test: temp, keep_prob: 1.0})
+
+
+        else:
+         #   print("BATCH < 50% white in mask")
+            shape = np.hstack([flags['test_batch_size'], flags['size_output_patch']])
+            shape[-1] = logits_test.get_shape()[3].value
+            pred = np.zeros(shape, dtype=np.float32)
+            for j in range(flags['test_batch_size']):
+                x = pred[j,:,:,:]
+                x[:,:,0] = 1.0
+                pred[j,:,:,:] = x
+
+        all_patches[start_idx:end_idx, :, :, :] = pred[range(end_idx - start_idx), :, :, :]
+
+        duration = time.time() - start_time
+        print('processing step %d/%d (%.2f sec/step)' % (ipatch + 1, len(batch_index) - 1, duration))
+
+    result = tf_model_input_test.MergePatches_test(all_patches, flags['stride_test'],
+                                                   image_size, flags['size_input_patch'],
+                                                   flags['size_output_patch'], flags)
+
+  #  print("RESIZE EXECUTED")
+   # result = KSimage.imresize(result, 2)
+
+    result = result * 255.0
+    result = result.astype(np.uint8)
+    result = np.argmax(result, axis=2)
+
+    #return result
+    return result
+########################################################################################################################
+#######################################################################################################
+def test(object_folder, model_path, filename_list, flags):
+    checkpoint_dir = os.path.join(object_folder, 'checkpoint')
+    mat_contents = matlab.load(os.path.join(checkpoint_dir, 'network_stats.mat'))
+    mean_image = np.float32(mat_contents['mean_image'])
+    variance_image = np.float32(mat_contents['variance_image'])
+
+    #turns 256 x 256 x 3 into 1 x 1 x 3
+    mean_image_new = np.array([mean_image[:, :, 0].mean(), mean_image[:,:,1].mean(), mean_image[:,:,2].mean()])
+    variance_image_new =  np.array([variance_image[:, :, 0].mean(), variance_image[:,:,1].mean(), variance_image[:,:,2].mean()])
+
+    with tf.Graph().as_default(), tf.device(flags['gpu']):
+        keep_prob = tf.placeholder(tf.float32)
+        # Place holder for patches
+        images_test = tf.placeholder(tf.float32)
+        # Network
+        with tf.variable_scope("network") as scope:
+            logits_test, parameters = tf_model.inference(images_test, keep_prob, flags)
+        # Saver and initialisation
+        saver = tf.train.Saver()
+        init = tf.global_variables_initializer()
+
+
+        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=flags['gpu_memory_fraction'])
+        config = tf.ConfigProto(allow_soft_placement=True, gpu_options=gpu_options)
+
+        with tf.Session(config=config) as sess:
+            # Initialise and load variables
+            sess.run(init)
+            saver.restore(sess, model_path)
+
+            result_dir = os.path.join(object_folder, 'result')
+            routine.create_dir(result_dir)
+
+            start_time = time.time()
+            for iImage, file in enumerate(filename_list):
+                startCurrentImTime = time.time()
+                file = file[0]
+                basename = os.path.basename(file)
+                basename = os.path.splitext(basename)[0]
+                savename = os.path.join(result_dir, basename + '.png')
+              #  if not os.path.exists(savename):
+                print('processing image %d/%d' % (iImage + 1, len(filename_list)))
+                if(flags['use_patches'] == False):
+                    result = whole_image_processing(file, sess, logits_test, parameters, images_test, keep_prob,mean_image_new, variance_image_new, flags)
+                else:
+                    result = batch_processing(file, sess, logits_test, parameters, images_test, keep_prob, mean_image, variance_image, flags)
+                KSimage.imwrite(result,savename)
+                print("TIME TAKEN FOR IMAGE: " + str(time.time() - startCurrentImTime) + "   SIZE: " + str(result.shape))
+
+            print("TOTAL DURATION : " + str(time.time() - start_time))
+
+

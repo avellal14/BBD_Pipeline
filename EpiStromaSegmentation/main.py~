@@ -1,0 +1,150 @@
+from KS_lib.prepare_data.routine import split_data
+from KS_lib.prepare_data.routine import gen_train_val_data
+from KS_lib.prepare_data.routine import select_train_val_instances
+from KS_lib.prepare_data.routine import gen_weight
+from KS_lib.prepare_data.routine import segment_tissue_area
+from KS_lib.prepare_data.routine import create_dir
+import glob
+import os
+
+###########################################################################
+
+# probe detection
+###########################################################################
+# import flags_probe_detection_red as flags
+# from KS_lib.tf_model_probe_detection import tf_model_main
+
+# split_data(flags.flags) # split data into train and test groups
+# gen_train_val_data(nth_fold = 1, flags=flags.flags) # generate training and validation dataset
+
+# tf_model_main.main(1, 'train', flags.flags)
+# tf_model_main.main(1, 'test_model', flags.flags)
+
+###########################################################################
+# probe detection 101
+###########################################################################
+# import flags_probe_detection_green101 as flags
+# from KS_lib.tf_model_probe_detection101 import tf_model_main
+
+# split_data(flags.flags) # split data into train and test groups
+# gen_train_val_data(nth_fold = 1, flags=flags.flags) # generate training and validation dataset
+
+# tf_model_main.main(1, 'train', flags.flags)
+# tf_model_main.main(1, 'test_model', flags.flags)
+
+############################################################################
+# dcis segmentation
+############################################################################
+# import flags_dcis_segmentation as flags
+# from KS_lib.tf_model_dcis_segmentation import tf_model_main
+#
+# split_data(flags.flags)
+# gen_train_val_data(nth_fold=1,flags=flags.flags)
+#
+# tf_model_main.main(1,'train',flags.flags)
+# tf_model_main.main(1, 'test_model', flags.flags)
+
+###########################################################################
+# dcis cell detection
+###########################################################################
+# import flags_dcis_cell_detection as flags
+# from KS_lib.tf_model_dcis_cell_detection import tf_model_main
+
+# split_data(flags.flags) # split data into train and test groups
+# gen_train_val_data(nth_fold = 1, flags=flags.flags) # generate training and validation dataset
+
+# tf_model_main.main(1, 'train', flags.flags)
+# tf_model_main.main(1, 'test_model', flags.flags)
+
+###########################################################################
+# dcis cell classification
+###########################################################################
+# import flags_dcis_cell_classification as flags
+# from KS_lib.tf_model_dcis_cell_classification import tf_model_main
+
+# split_data(flags.flags)
+# gen_train_val_data(nth_fold = 1, flags=flags.flags) # generate training and validation dataset
+
+# tf_model_main.main(1,'train', flags.flags)
+# tf_model_main.main(1, 'test_model', flags.flags)
+
+
+###########################################################################
+# dcis cell detection & classification
+###########################################################################
+# import flags_dcis_cell_detection_classification as flags
+# from KS_lib.tf_model_dcis_cell_classification import tf_model_main
+#
+# tf_model_main.main(3, 'test_model', flags.flags)
+
+############################################################################
+# dcis cell segmentation
+############################################################################
+# import flags_dcis_cell_segmentation as flags
+# from KS_lib.tf_model_dcis_cell_segmentation import tf_model_main
+
+# split_data(flags.flags)
+# gen_train_val_data(nth_fold=1,flags=flags.flags)
+
+# tf_model_main.main(1,'train',flags.flags)
+# tf_model_main.main(1, 'test_model', flags.flags)
+
+############################################################################
+# he cell segmentation
+############################################################################
+import flags_he_cell_segmentation as flags
+from KS_lib.tf_model_he_cell_segmentation import tf_model_main
+
+#split_data(flags.flags)
+#gen_train_val_data(nth_fold=1,flags=flags.flags)
+
+#tf_model_main.main(1,'train',flags.flags)
+tf_model_main.main(1, 'test_model', flags.flags)
+
+############################################################################
+# he dcis segmentation
+############################################################################
+# import flags_he_dcis_segmentation as flags
+# from KS_lib.tf_model_he_dcis_segmentation import tf_model_main
+
+# split_data(flags.flags)
+# gen_train_val_data(nth_fold=1,flags=flags.flags)
+
+# tf_model_main.main(1,'train',flags.flags)
+# tf_model_main.main(1, 'test_model', flags.flags)
+
+############################################################################
+# he dcis segmentation 4
+############################################################################
+# import flags_he_dcis_segmentation4 as flags
+# from KS_lib.tf_model_he_dcis_segmentation4 import tf_model_main
+
+# split_data(flags.flags)
+# gen_train_val_data(nth_fold=1,flags=flags.flags)
+
+# tf_model_main.main(1,'train',flags.flags)
+# tf_model_main.main(1, 'test_model', flags.flags)
+
+############################################################################
+# he dcis segmentation retrain
+############################################################################
+# import flags_he_dcis_segmentation_retrain as flags
+# from KS_lib.tf_model_he_dcis_segmentation_retrain import tf_model_main
+
+# split_data(flags.flags)
+# gen_train_val_data(nth_fold=1,flags=flags.flags)
+
+# tf_model_main.main(1,'train',flags.flags)
+# tf_model_main.main(1, 'test_model', flags.flags)
+
+############################################################################
+# he cell classification
+############################################################################
+# import flags_he_cell_classification as flags
+# from KS_lib.tf_model_he_cell_classification import tf_model_main
+
+# split_data(flags.flags)
+# gen_train_val_data(nth_fold=1,flags=flags.flags)
+
+# tf_model_main.main(1,'train',flags.flags)
+# tf_model_main.main(1, 'test_model', flags.flags)

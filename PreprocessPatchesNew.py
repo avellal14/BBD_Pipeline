@@ -156,7 +156,7 @@ def processCSV(csvLocation, destinationDirectory):
            numImages = int(currentPatient[3])
            mrxsFileList = os.listdir(currentPatient[4])
            mrxsFileList = [f for f in mrxsFileList if os.path.isfile(os.path.join(currentPatient[4], f)) and currentPatient[0] in f]
- #PRO STRATS --> grab first n images with patients name
+
            if(len(mrxsFileList) > numImages):
                 mrxsFileList = mrxsFileList[0:numImages]
 
@@ -182,10 +182,6 @@ def processCSV(csvLocation, destinationDirectory):
 #TODO: Jan, please input the appropriate information here. First directory should be location of CSV file(should already be correct). Second directory is where you want to save all the patches (I have set it to C:/WSI_Patches on the local machine, but you can change it)
 processCSV(os.path.join('R:', os.sep, 'Beck Lab', 'HENG_BBD_Texture_NHS', 'BBD_NCC_modifiedWithPaths_tocreatepatches40x_15Mar18.csv'), os.path.join('R:', os.sep, 'Beck Lab', 'HENG_BBD_Texture_NHS', 'BBD_NCC_10xExtraction_40x'))
 ###################
-
-
-#processCSV(os.path.join('C:', os.sep, 'Adithya', 'BIDMC', 'Test_Images_12-21', 'BBD_NCC_modifiedWithPaths_tocreatepatches_part3_40x.csv'), os.path.join('C:', os.sep, 'Adithya', 'BIDMC', 'WSI_Patches')) #'R:\Beck Lab\HENG_BBD_Texture_NHS\BBD_NCC_Covariate_Outcome_KK_JH_modifiedWithPaths.csv')
-
 
 
 
